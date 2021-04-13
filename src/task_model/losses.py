@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
 
-DEFAULT_ALPHA = 0.6
+DEFAULT_ALPHA = 0.5
 DEFAULT_GAMMA = 4/3
 DEFAULT_F_BETA = 1.3333
 DEFAULT_EPS = 1e-6
@@ -13,6 +13,7 @@ def focal_tversky_wp(y_true, y_pred, alpha=DEFAULT_ALPHA, gamma=DEFAULT_GAMMA, c
 
 def tversky_wp(y_true, y_pred, alpha=DEFAULT_ALPHA, const=DEFAULT_EPS):
     return tversky(y_true, y_pred, alpha, const)
+
 
 def dice_coef(y_true, y_pred, const=K.epsilon()):
     '''
@@ -62,7 +63,7 @@ def dice(y_true, y_pred, const=K.epsilon()):
     
     return loss_val
 
-def tversky_coef(y_true, y_pred, alpha=0.5, const=K.epsilon()):
+def tversky_coef(y_true, y_pred, alpha=DEFAULT_ALPHA, const=K.epsilon()):
     '''
     Weighted Sørensen–Dice coefficient.
     
@@ -87,7 +88,7 @@ def tversky_coef(y_true, y_pred, alpha=0.5, const=K.epsilon()):
     
     return coef_val
 
-def tversky(y_true, y_pred, alpha=0.5, const=K.epsilon()):
+def tversky(y_true, y_pred, alpha=DEFAULT_ALPHA, const=K.epsilon()):
     '''
     Tversky Loss.
     
@@ -116,7 +117,7 @@ def tversky(y_true, y_pred, alpha=0.5, const=K.epsilon()):
     
     return loss_val
 
-def focal_tversky(y_true, y_pred, alpha=0.5, gamma=4/3, const=K.epsilon()):
+def focal_tversky(y_true, y_pred, alpha=DEFAULT_ALPHA, gamma=4/3, const=K.epsilon()):
     
     '''
     Focal Tversky Loss (FTL)

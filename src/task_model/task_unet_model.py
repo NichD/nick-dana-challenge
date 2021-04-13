@@ -3,24 +3,22 @@ from tensorflow.keras.layers import Conv2D, Conv2DTranspose, Activation, BatchNo
 from tensorflow.keras.layers import UpSampling2D, Input, Concatenate, Reshape, Permute
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications import MobileNetV2
-from attention import UNET_att_right
+from task_model.attention import UNET_att_right
 
 
-DEFAULT_IMAGE_SIZE = [None, 512, 512, 3]
+DEFAULT_IMAGE_SIZE = [512, 512, 3]
 DEFAULT_MODEL_WIDTH_ALPHA = 0.5
 DEFAULT_RESIDUAL_LAYER_NAMES = ['encoder_input',   
                                 'block_1_expand_relu',   # 64x64x96
                                 'block_3_expand_relu',   # 32x32x144
                                 'block_6_expand_relu']   # 16x16x192
 DEFAULT_RESIDUAL_LAYER_CHANNELS =  [16, 32, 48, 64]
-DEFAULT_NORM_LAYER = True
-DEFAULT_AUGMENTATION = True
 
 
-def MobileNetV2_UNet(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=1.,
+def MobileNetV2_UNet(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=DEFAULT_MODEL_WIDTH_ALPHA,
                      residual_layer_names: list=DEFAULT_RESIDUAL_LAYER_NAMES,
                      residual_layer_channels: list=DEFAULT_RESIDUAL_LAYER_CHANNELS,
-                     num_channels=3, normalize=DEFAULT_NORM_LAYER, augment=DEFAULT_AUGMENTATION):
+                     num_channels=1):
     # include norm layers - Norm weights taken from pytorch docs as TF docs are sparse
     # https://www.tensorflow.org/api_docs/python/tf/keras/layers/experimental/preprocessing/Resizing
     # https://www.tensorflow.org/api_docs/python/tf/keras/layers/experimental/preprocessing/Rescaling
@@ -46,14 +44,11 @@ def MobileNetV2_UNet(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=1.,
         tf.keras.layers.experimental.preprocessing.RandomTranslation(0.05, 0.05, name='rand_translate') # +-5% translation option
         ])    
 
-    # get input apply norm and augment layers if applicable
+    # get input apply norm and augment layers
     # defines model input single sample shape
     inputs = Input(shape=img_size, name="input_image")
-    # x = inputs
-    if normalize:
-        inputs = norm_layers(inputs)
-    if augment:
-        inputs = augmenation(inputs)
+    x = norm_layers(inputs)
+    x = augmenation(x)
         
     # https://www.tensorflow.org/api_docs/python/tf/keras/applications/MobileNetV2
     # Let's breakdown this really quick:
@@ -64,7 +59,7 @@ def MobileNetV2_UNet(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=1.,
     #     alpha -> controls network "width", controls filter scaling down the network
     #     encoder_output -> top layer of encoder to start decode path
     # instantiate encoder, lock weights, get output.
-    encoder = MobileNetV2(input_tensor=Input(name="encoder_input", tensor=inputs),
+    encoder = MobileNetV2(input_tensor=Input(name="encoder_input", tensor=x),
                           input_shape=img_size, weights="imagenet", 
                           include_top=False, alpha=width_alpha)
     encoder.trainable = False
@@ -114,10 +109,10 @@ def MobileNetV2_UNet(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=1.,
 
 
 ################ Alternative formulation to calculate image with mean RGB in the mask region
-def MobileNetV2_UNet_Attn(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=1.,
-                          residual_layer_names: list=DEFAULT_RESIDUAL_LAYER_NAMES,
-                          residual_layer_channels: list=DEFAULT_RESIDUAL_LAYER_CHANNELS,
-                          num_channels=3, normalize=DEFAULT_NORM_LAYER, augment=DEFAULT_AUGMENTATION):
+def MobileNetV2_UNet_Attn(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=DEFAULT_MODEL_WIDTH_ALPHA,
+                     residual_layer_names: list=DEFAULT_RESIDUAL_LAYER_NAMES,
+                     residual_layer_channels: list=DEFAULT_RESIDUAL_LAYER_CHANNELS,
+                     num_channels=1):
     # include norm layers - Norm weights taken from pytorch docs as TF docs are sparse
     # https://www.tensorflow.org/api_docs/python/tf/keras/layers/experimental/preprocessing/Resizing
     # https://www.tensorflow.org/api_docs/python/tf/keras/layers/experimental/preprocessing/Rescaling
@@ -143,15 +138,12 @@ def MobileNetV2_UNet_Attn(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=
         tf.keras.layers.experimental.preprocessing.RandomTranslation(0.05, 0.05, name='rand_translate') 
         ])    
 
-    # get input apply norm and augment layers if applicable
+    # get input apply norm and augment layers
     # defines model input single sample shape
     inputs = Input(shape=img_size, name="input_image")
-    # x = inputs
-    if normalize:
-        inputs = norm_layers(inputs)
-    if augment:
-        inputs = augmenation(inputs)
-        
+    x = norm_layers(inputs)
+    x = augmenation(x)
+    
     # https://www.tensorflow.org/api_docs/python/tf/keras/applications/MobileNetV2
     # Let's breakdown this really quick:
     #     input_shape -> defines input sample size
@@ -192,10 +184,10 @@ def MobileNetV2_UNet_Attn(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=
 
 
 ################ Alternative formulation to calculate image with mean RGB in the mask region
-def MobileNetV2_UNet_MeanMask(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=1.,
-                              residual_layer_names: list=DEFAULT_RESIDUAL_LAYER_NAMES,
-                              residual_layer_channels: list=DEFAULT_RESIDUAL_LAYER_CHANNELS,
-                              num_channels=3, normalize=DEFAULT_NORM_LAYER, augment=DEFAULT_AUGMENTATION):
+def MobileNetV2_UNet_MeanMask(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: float=DEFAULT_MODEL_WIDTH_ALPHA,
+                     residual_layer_names: list=DEFAULT_RESIDUAL_LAYER_NAMES,
+                     residual_layer_channels: list=DEFAULT_RESIDUAL_LAYER_CHANNELS,
+                     num_channels=1):
     # include norm layers - Norm weights taken from pytorch docs as TF docs are sparse
     # https://www.tensorflow.org/api_docs/python/tf/keras/layers/experimental/preprocessing/Resizing
     # https://www.tensorflow.org/api_docs/python/tf/keras/layers/experimental/preprocessing/Rescaling
@@ -221,14 +213,11 @@ def MobileNetV2_UNet_MeanMask(img_size: list=DEFAULT_IMAGE_SIZE, width_alpha: fl
         tf.keras.layers.experimental.preprocessing.RandomTranslation(0.05, 0.05, name='rand_translate') # +-5% translation option
         ])    
 
-    # get input apply norm and augment layers if applicable
+    # get input apply norm and augment layers
     # defines model input single sample shape
     inputs = Input(shape=img_size, name="input_image")
-    # x = inputs
-    if normalize:
-        inputs = norm_layers(inputs)
-    if augment:
-        inputs = augmenation(inputs)
+    x = norm_layers(inputs)
+    x = augmenation(x)
         
     # https://www.tensorflow.org/api_docs/python/tf/keras/applications/MobileNetV2
     # Let's breakdown this really quick:
